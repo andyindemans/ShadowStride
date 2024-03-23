@@ -1,5 +1,7 @@
-using System;
+﻿using System;
 using UnityEngine;
+﻿using System.Collections;
+using System.Collections.Generic;
 using UnityEngine.InputSystem;
 
 public class Movement : MonoBehaviour
@@ -7,14 +9,19 @@ public class Movement : MonoBehaviour
     //Assignables #===============================#
     public LayerMask whatIsGround;
     public float maxSlopeAngle = 35f;
-    public float runSpeed = 650f;
-    public float walkSpeed = 200f;
+    public float runSpeed = 6500f;
+    public float walkSpeed = 1000f;
     public float sensitivity = 50.0f;
     public Transform playerCam;
     public Transform orientation;
-    public float maxSpeed = 450f;
+    public float maxSpeed = 7f;
     public bool enableHeadBobbing = true;
     public Camera camera; //Use actual Main Camera
+
+    //Crouch
+    private Vector3 playerScale;
+    private Vector3 crouchPosition = new Vector3(0, 0.5f, 0);
+    private Vector3 standingPosition = new Vector3(0, 1f, 0);
 
     //Privates
     private bool cancellingGrounded;
@@ -38,21 +45,18 @@ public class Movement : MonoBehaviour
     public bool jumping, crouching;
     public bool isSprinting = false;
     public bool grounded;
+    public bool isSliding;
 
     //Jumping
     private bool readyToJump = false;
     public float jumpForce = 450f;
 
-    //Crouch
-    private Vector3 crouchScale = new Vector3(1, 0.5f, 1);
-    private Vector3 playerScale;
-
     //Sliding
-    public float slideForce = 3000;
-    public float slideCounterMovement = 0.2f;
+    public float slideForce = 400f;
+    public float slideCounterMovement = 0.08f;
     private Vector3 normalVector = Vector3.up;
     private Vector3 wallNormalVector;
-    private float counterMovement = 0.225f;
+    private float counterMovement = 0.1f;
     private float threshold = 0.03f;
 
     //Wallrunning
@@ -202,6 +206,8 @@ public class Movement : MonoBehaviour
         //Counteract sliding and sloppy movement
         CounterMovement(inputVector.x, inputVector.y, mag);
 
+        isSliding = rb.velocity.magnitude > 1f && grounded && crouching;
+
         //If speed is larger than maxspeed, cancel out the input so you don't go over max speed
         if (inputVector.x > 0 && xMag > maxSpeed) inputVector.x = 0;
         if (inputVector.x < 0 && xMag < -maxSpeed) inputVector.x = 0;
@@ -218,7 +224,7 @@ public class Movement : MonoBehaviour
 
 
         // Disable movement while sliding
-        if (grounded && crouching) multiplier = 0f;
+        if (isSliding) multiplier = 0f;
 
         // Check for Sprint input
         float speed = walkSpeed;
@@ -256,7 +262,7 @@ public class Movement : MonoBehaviour
             rb.AddForce(runSpeed * orientation.transform.forward * Time.deltaTime * -mag.y * counterMovement);
         }
 
-        //Limit diagonal running. This will also cause a full stop if sliding fast and un-crouching, so not optimal.
+        //Limit diagonal running
         if (Mathf.Sqrt((Mathf.Pow(rb.velocity.x, 2) + Mathf.Pow(rb.velocity.z, 2))) > maxSpeed)
         {
             float fallspeed = rb.velocity.y;
@@ -270,7 +276,7 @@ public class Movement : MonoBehaviour
     {
         if (grounded && readyToJump && !isWallRunning && !crouching)
         {
-            Vector3 jump = new Vector3(0, jumpForce * 0.75f, 0);
+            Vector3 jump = new Vector3(0, jumpForce * 0.65f, 0);
 
             //Add jump forces
             rb.AddForce(jump * Time.fixedDeltaTime, ForceMode.Impulse);
@@ -291,13 +297,11 @@ public class Movement : MonoBehaviour
 
     public void StartCrouch(InputAction.CallbackContext context)
     {
-        transform.localScale = crouchScale;
-        Vector3 crouchPosition = new Vector3(0, 0.5f, 0);
-        transform.position = Vector3.Lerp(transform.position, crouchPosition, Time.fixedDeltaTime);
+        transform.localScale = crouchPosition;
         crouching = true;
 
         //Sliding
-        if (rb.velocity.magnitude > 1f && grounded)
+        if (isSliding)
         {
             rb.AddForce(orientation.transform.forward * slideForce);
         } 
@@ -306,8 +310,6 @@ public class Movement : MonoBehaviour
     public void StopCrouch(InputAction.CallbackContext context)
     {
         transform.localScale = playerScale;
-        Vector3 standingPosition = new Vector3(0, 1f, 0);
-        transform.position = Vector3.Lerp(transform.position, standingPosition, Time.fixedDeltaTime);
         crouching = false;
     }
 
