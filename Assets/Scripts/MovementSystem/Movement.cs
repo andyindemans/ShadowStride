@@ -19,6 +19,7 @@ public class Movement : MonoBehaviour
     public Camera camera; //Use actual Main Camera
 
     //Crouch
+    public bool crouching;
     private Vector3 playerScale;
     private Vector3 crouchPosition = new Vector3(0, 0.5f, 0);
     private Vector3 standingPosition = new Vector3(0, 1f, 0);
@@ -29,6 +30,7 @@ public class Movement : MonoBehaviour
     private float sensMultiplier = 1f;
     private float xRotation;
     private Vector3 direction;
+    private bool isRunning;
 
     //Head Bobbing
     private float runBobSpeed = 12f;
@@ -42,12 +44,12 @@ public class Movement : MonoBehaviour
     private MovementSystem movementSystem;
 
     //Bools
-    public bool jumping, crouching;
     public bool isSprinting = false;
     public bool grounded;
     public bool isSliding;
 
     //Jumping
+    public bool jumping;
     private bool readyToJump = false;
     public float jumpForce = 450f;
 
@@ -128,8 +130,10 @@ public class Movement : MonoBehaviour
     {
         if (!isWallRunning) Move();
         if (enableHeadBobbing) HeadBob();
-        PlayRunAnimation();
         if ((isWallRight || isWallLeft) && wallrunButtonHeld) Wallrun();
+
+        PlayRunAnimation();
+        isRunning = rb.velocity.magnitude > 0.5f;
     }
 
 
@@ -246,7 +250,7 @@ public class Movement : MonoBehaviour
         if (!grounded || jumping) return;
 
         //Slow down sliding
-        if (crouching)
+        if (isSliding)
         {
             rb.AddForce(runSpeed * Time.deltaTime * -rb.velocity.normalized * slideCounterMovement);
             return;
@@ -352,7 +356,7 @@ public class Movement : MonoBehaviour
             return;
         }
 
-        if (rb.velocity.magnitude > 0.5f)
+        if (isRunning)
         {
             timer += Time.deltaTime * runBobSpeed;
             camera.transform.localPosition = new Vector3(camera.transform.localPosition.x, defaultYPos + Mathf.Sin(timer) * runBobAmount, camera.transform.localPosition.z);

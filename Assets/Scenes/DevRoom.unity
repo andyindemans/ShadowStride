@@ -2403,15 +2403,15 @@ MonoBehaviour:
   sensitivity: 50
   playerCam: {fileID: 2050048617}
   orientation: {fileID: 724184401}
-  maxSpeed: 7
+  maxSpeed: 6
   enableHeadBobbing: 1
   camera: {fileID: 815337478}
-  runBobAmount: 0.05
-  jumping: 0
   crouching: 0
+  runBobAmount: 0.05
   isSprinting: 0
   grounded: 0
   isSliding: 0
+  jumping: 0
   jumpForce: 450
   slideForce: 400
   slideCounterMovement: 0.08
