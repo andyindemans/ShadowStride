@@ -2413,7 +2413,7 @@ MonoBehaviour:
   isSliding: 0
   jumping: 0
   jumpForce: 450
-  slideForce: 400
+  slideForce: 200
   slideCounterMovement: 0.08
   whatIsWall:
     serializedVersion: 2

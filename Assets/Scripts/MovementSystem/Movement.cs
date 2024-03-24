@@ -3,6 +3,7 @@ using UnityEngine;
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine.InputSystem;
+using Unity.VisualScripting;
 
 public class Movement : MonoBehaviour
 {
@@ -20,6 +21,8 @@ public class Movement : MonoBehaviour
 
     //Crouch
     public bool crouching;
+    private bool isCrouched;
+    private bool readyToCrouch = true;
     private Vector3 playerScale;
     private Vector3 crouchPosition = new Vector3(0, 0.5f, 0);
     private Vector3 standingPosition = new Vector3(0, 1f, 0);
@@ -60,6 +63,7 @@ public class Movement : MonoBehaviour
     private Vector3 wallNormalVector;
     private float counterMovement = 0.1f;
     private float threshold = 0.03f;
+    private Vector3 slidePosition = new Vector3(0, 0.3f, 0);
 
     //Wallrunning
     private float wallRunCameraTilt = 0f;
@@ -134,6 +138,10 @@ public class Movement : MonoBehaviour
 
         PlayRunAnimation();
         isRunning = rb.velocity.magnitude > 0.5f;
+        isCrouched = grounded && crouching;
+        if(isSliding) isSliding = rb.velocity.magnitude > 3f;
+
+        AnimatePlayerScale();
     }
 
 
@@ -210,33 +218,26 @@ public class Movement : MonoBehaviour
         //Counteract sliding and sloppy movement
         CounterMovement(inputVector.x, inputVector.y, mag);
 
-        isSliding = rb.velocity.magnitude > 1f && grounded && crouching;
+        float speedPenalty = 1f;
+        if (isCrouched) speedPenalty = 3f;
 
         //If speed is larger than maxspeed, cancel out the input so you don't go over max speed
-        if (inputVector.x > 0 && xMag > maxSpeed) inputVector.x = 0;
-        if (inputVector.x < 0 && xMag < -maxSpeed) inputVector.x = 0;
-        if (inputVector.y > 0 && yMag > maxSpeed) inputVector.y = 0;
-        if (inputVector.y < 0 && yMag < -maxSpeed) inputVector.y = 0;
+        if (inputVector.x > 0 && xMag > (maxSpeed / speedPenalty)) inputVector.x = 0;
+        if (inputVector.x < 0 && xMag < -(maxSpeed / speedPenalty)) inputVector.x = 0;
+        if (inputVector.y > 0 && yMag > (maxSpeed / speedPenalty)) inputVector.y = 0;
+        if (inputVector.y < 0 && yMag < -(maxSpeed / speedPenalty)) inputVector.y = 0;
 
         float multiplier = 1f;
 
         // Movement while mid-air
-        if (!grounded && !isWallRunning)
-        {
-            multiplier = 0.1f;
-        }
-
+        if (!grounded && !isWallRunning) multiplier = 0.1f;
 
         // Disable movement while sliding
-        if (isSliding) multiplier = 0f;
+        if (isSliding) return;
 
         // Check for Sprint input
         float speed = walkSpeed;
-        if (isSprinting)
-        {
-            speed = runSpeed;
-        }
-
+        if (isSprinting) speed = runSpeed;
 
         //Apply forces to move player
         direction = new Vector3(inputVector.x, 0, inputVector.y);
@@ -301,20 +302,37 @@ public class Movement : MonoBehaviour
 
     public void StartCrouch(InputAction.CallbackContext context)
     {
-        transform.localScale = crouchPosition;
-        crouching = true;
-
-        //Sliding
-        if (isSliding)
+        if (readyToCrouch)
         {
-            rb.AddForce(orientation.transform.forward * slideForce);
-        } 
+            readyToCrouch = false;
+            transform.localScale = crouchPosition;
+            crouching = true;
+            isSliding = rb.velocity.magnitude > 5f && crouching;
+
+            //Sliding
+            if (isSliding && grounded)
+            {
+                rb.AddForce(orientation.transform.forward * slideForce);
+            }
+        }
+        else return;
     }
 
     public void StopCrouch(InputAction.CallbackContext context)
     {
         transform.localScale = playerScale;
         crouching = false;
+        Invoke(nameof(ResetCrouch), 0.3f);
+    }
+
+    private void ResetCrouch()
+    {
+        readyToCrouch = true;
+    }
+
+    private void AnimatePlayerScale()
+    {
+        
     }
 
 
